@@ -24,9 +24,18 @@ const icons = {
   Turkish: "🫖"
 };
 
+
+/* =========================
+   TOAST
+========================= */
+
 function toast(msg) {
   const t = $("#toast");
-  if (!t) return;
+
+  if (!t) {
+    alert(msg);
+    return;
+  }
 
   t.textContent = msg;
   t.classList.add("show");
@@ -36,13 +45,29 @@ function toast(msg) {
   }, 2200);
 }
 
+
+/* =========================
+   API
+========================= */
+
 async function api(url, opt = {}) {
-  const r = await fetch(API_BASE + url, {
+
+  const options = {
+    credentials: "include",
+
     headers: {
       "Content-Type": "application/json"
     },
-    ...opt
-  });
+
+    ...opt,
+
+    headers: {
+      "Content-Type": "application/json",
+      ...(opt.headers || {})
+    }
+  };
+
+  const r = await fetch(API_BASE + url, options);
 
   const d = await r.json().catch(() => ({}));
 
@@ -53,69 +78,117 @@ async function api(url, opt = {}) {
   return d;
 }
 
-function roleName(r) {
+
+/* =========================
+   ROLE
+========================= */
+
+function roleName(role) {
+
   return {
     admin: "Admin",
     runner: "Runner",
     employee: "Employee"
-  }[r] || r;
+  }[role] || role;
 }
 
 
-/* ================= LOGIN ================= */
+/* =========================
+   LOGIN
+========================= */
 
-$("#loginForm").onsubmit = async e => {
-  e.preventDefault();
+if ($("#loginForm")) {
 
-  try {
-    const d = await api("/api/login", {
-      method: "POST",
-      body: JSON.stringify({
-        username: $("#username").value,
-        password: $("#password").value
-      })
-    });
+  $("#loginForm").onsubmit = async e => {
 
-    me = d.user;
+    e.preventDefault();
 
-    start();
+    try {
 
-  } catch (e) {
-    toast(e.message);
-  }
-};
+      const d = await api("/api/login", {
+        method: "POST",
 
+        body: JSON.stringify({
+          username: $("#username").value.trim(),
+          password: $("#password").value
+        })
+      });
 
-/* ================= LOGOUT ================= */
+      me = d.user;
 
-$("#logout").onclick = async () => {
+      start();
 
-  try {
-    await api("/api/logout", {
-      method: "POST"
-    });
-  } catch {}
+    } catch (e) {
 
-  location.reload();
-};
+      toast(e.message);
+
+    }
+  };
+
+}
 
 
-/* ================= START APP ================= */
+/* =========================
+   LOGOUT
+========================= */
+
+if ($("#logout")) {
+
+  $("#logout").onclick = async () => {
+
+    try {
+
+      await api("/api/logout", {
+        method: "POST"
+      });
+
+    } catch {}
+
+    location.reload();
+
+  };
+
+}
+
+
+/* =========================
+   START
+========================= */
 
 function start() {
 
-  $("#loginView").classList.add("hidden");
-  $("#app").classList.remove("hidden");
+  if ($("#loginView")) {
+    $("#loginView").classList.add("hidden");
+  }
 
-  $("#hello").textContent = `مرحباً، ${me.name}`;
+  if ($("#app")) {
+    $("#app").classList.remove("hidden");
+  }
 
-  $("#profileName").textContent = me.name;
+  if ($("#hello")) {
+    $("#hello").textContent =
+      `مرحباً، ${me.name}`;
+  }
 
-  $("#profileRole").textContent = roleName(me.role);
+  if ($("#profileName")) {
+    $("#profileName").textContent =
+      me.name;
+  }
 
-  $("#avatar").textContent = me.name[0];
+  if ($("#profileRole")) {
+    $("#profileRole").textContent =
+      roleName(me.role);
+  }
 
-  if (me.role !== "admin") {
+  if ($("#avatar")) {
+    $("#avatar").textContent =
+      me.name?.[0] || "☕";
+  }
+
+  if (
+    me.role !== "admin" &&
+    $("#usersNav")
+  ) {
     $("#usersNav").style.display = "none";
   }
 
@@ -129,416 +202,756 @@ function start() {
 }
 
 
-/* ================= DRINKS ================= */
+/* =========================
+   DRINKS
+========================= */
 
 function renderDrinks() {
 
   const g = $("#drinkGrid");
 
+  if (!g) return;
+
   g.innerHTML = drinks.map(d => `
+
     <button
       type="button"
-      class="drink-option ${d === selectedDrink ? "selected" : ""}"
+      class="drink-option ${
+        d === selectedDrink ? "selected" : ""
+      }"
       data-drink="${d}"
     >
+
       <span>${icons[d]}</span>
+
       ${d}
+
     </button>
+
   `).join("");
 
-  g.querySelectorAll(".drink-option").forEach(b => {
 
-    b.onclick = () => {
+  g.querySelectorAll(".drink-option")
+    .forEach(button => {
 
-      selectedDrink = b.dataset.drink;
+      button.onclick = () => {
 
-      renderDrinks();
-    };
+        selectedDrink =
+          button.dataset.drink;
 
-  });
+        renderDrinks();
+
+      };
+
+    });
+
 }
 
 
-/* ================= ADD ORDER ================= */
+/* =========================
+   ADD ORDER
+========================= */
 
-$("#orderForm").onsubmit = async e => {
+if ($("#orderForm")) {
 
-  e.preventDefault();
+  $("#orderForm").onsubmit = async e => {
 
-  try {
+    e.preventDefault();
 
-    await api("/api/orders", {
-      method: "POST",
+    try {
 
-      body: JSON.stringify({
-        drink: selectedDrink,
-        size: $("#size").value,
-        extra: $("#extra").value
-      })
-    });
+      const size =
+        $("#size")?.value || "";
 
-    toast("تم تسجيل طلبك ☕");
-
-    $("#extra").value = "";
-
-    loadOrders();
-
-    loadStats();
-
-  } catch (e) {
-
-    toast(e.message);
-
-  }
-};
+      const extra =
+        $("#extra")?.value || "";
 
 
-/* ================= ORDERS ================= */
+      if (!me) {
+
+        toast("يجب تسجيل الدخول أولاً");
+
+        return;
+
+      }
+
+
+      if (!selectedDrink) {
+
+        toast("اختاري المشروب أولاً");
+
+        return;
+
+      }
+
+
+      if (!size) {
+
+        toast("اختاري الحجم أولاً");
+
+        return;
+
+      }
+
+
+      await api("/api/orders", {
+
+        method: "POST",
+
+        body: JSON.stringify({
+
+          drink: selectedDrink,
+
+          size: size,
+
+          extra: extra
+
+        })
+
+      });
+
+
+      toast("تم تسجيل طلبك ☕");
+
+      if ($("#extra")) {
+        $("#extra").value = "";
+      }
+
+
+      await loadOrders();
+
+      await loadStats();
+
+
+    } catch (e) {
+
+      toast(e.message);
+
+      console.error(e);
+
+    }
+
+  };
+
+}
+
+
+/* =========================
+   LOAD ORDERS
+========================= */
 
 async function loadOrders() {
 
   try {
 
-    const orders = await api("/api/orders");
-
-    $("#todayTotal").textContent = orders.length;
-
-    $("#miniList").innerHTML =
-      orders.slice(0, 4).map(o => `
-        <div class="mini-item">
-          <span>${o.name}</span>
-          <b>${o.drink}</b>
-        </div>
-      `).join("")
-      || "<small>لا توجد طلبات بعد.</small>";
+    const orders =
+      await api("/api/orders");
 
 
-    const canRun = ["runner", "admin"].includes(me.role);
+    if ($("#todayTotal")) {
+
+      $("#todayTotal").textContent =
+        orders.length;
+
+    }
 
 
-    $("#ordersTable").innerHTML = orders.length
+    if ($("#miniList")) {
 
-      ? `
-        <table class="table">
+      $("#miniList").innerHTML =
 
-          <thead>
-            <tr>
-              <th>الاسم</th>
-              <th>المشروب</th>
-              <th>الحجم</th>
-              <th>الإضافة</th>
-              <th>الحالة</th>
-            </tr>
-          </thead>
+        orders
+          .slice(0, 4)
+          .map(o => `
 
-          <tbody>
+            <div class="mini-item">
 
-            ${orders.map(o => `
+              <span>
+                ${o.name}
+              </span>
 
-              <tr class="${o.completed ? "done" : ""}">
+              <b>
+                ${o.drink}
+              </b>
 
-                <td>${o.name}</td>
+            </div>
 
-                <td>${o.drink}</td>
+          `)
+          .join("")
 
-                <td>
-                  <span class="pill">
-                    ${o.size}
-                  </span>
-                </td>
+        ||
 
-                <td>
-                  ${o.extra || "—"}
-                </td>
+        "<small>لا توجد طلبات بعد.</small>";
 
-                <td>
+    }
 
-                  ${
-                    canRun
 
-                    ? `
-                      <input
-                        type="checkbox"
-                        ${o.completed ? "checked" : ""}
-                        onchange="toggleOrder(${o.id}, this.checked)"
-                      >
-                    `
+    const canRun =
+      ["runner", "admin"].includes(me?.role);
 
-                    : (
-                      o.completed
-                      ? "✓ جاهز"
-                      : "قيد التجهيز"
-                    )
-                  }
 
-                </td>
+    if (!$("#ordersTable")) {
+      return;
+    }
 
-              </tr>
 
-            `).join("")}
+    $("#ordersTable").innerHTML =
 
-          </tbody>
+      orders.length
 
-        </table>
+      ?
+
       `
 
-      : "<p>ما في طلبات اليوم 🤎</p>";
+      <table class="table">
+
+        <thead>
+
+          <tr>
+
+            <th>الاسم</th>
+
+            <th>المشروب</th>
+
+            <th>الحجم</th>
+
+            <th>الإضافة</th>
+
+            <th>الحالة</th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody>
+
+          ${orders.map(o => `
+
+            <tr
+              class="${
+                o.completed
+                  ? "done"
+                  : ""
+              }"
+            >
+
+              <td>
+                ${o.name}
+              </td>
+
+              <td>
+                ${o.drink}
+              </td>
+
+              <td>
+
+                <span class="pill">
+                  ${o.size}
+                </span>
+
+              </td>
+
+              <td>
+                ${o.extra || "—"}
+              </td>
+
+              <td>
+
+                ${
+                  canRun
+
+                  ?
+
+                  `
+
+                  <input
+                    type="checkbox"
+                    ${
+                      o.completed
+                        ? "checked"
+                        : ""
+                    }
+                    onchange="
+                      toggleOrder(
+                        ${o.id},
+                        this.checked
+                      )
+                    "
+                  >
+
+                  `
+
+                  :
+
+                  (
+
+                    o.completed
+
+                    ?
+
+                    "✓ جاهز"
+
+                    :
+
+                    "قيد التجهيز"
+
+                  )
+                }
+
+              </td>
+
+            </tr>
+
+          `).join("")}
+
+        </tbody>
+
+      </table>
+
+      `
+
+      :
+
+      "<p>ما في طلبات اليوم 🤎</p>";
+
 
   } catch (e) {
 
-    toast(e.message);
+    console.error(
+      "loadOrders error:",
+      e
+    );
+
+    if ($("#ordersTable")) {
+
+      $("#ordersTable").innerHTML =
+        "<p>تعذر تحميل الطلبات.</p>";
+
+    }
 
   }
+
 }
 
 
-/* ================= COMPLETE ORDER ================= */
+/* =========================
+   TOGGLE ORDER
+========================= */
 
-window.toggleOrder = async (id, checked) => {
+window.toggleOrder =
+  async (id, checked) => {
 
-  try {
+    try {
 
-    await api(`/api/orders/${id}`, {
-      method: "PATCH",
+      await api(
+        `/api/orders/${id}`,
+        {
+          method: "PATCH",
 
-      body: JSON.stringify({
-        completed: checked
-      })
-    });
+          body: JSON.stringify({
+            completed: checked
+          })
+        }
+      );
 
-    loadOrders();
+      await loadOrders();
 
-  } catch (e) {
-
-    toast(e.message);
-
-  }
-};
-
-
-/* ================= CLEAR ORDERS ================= */
-
-$("#clearOrders").onclick = async () => {
-
-  if (!confirm("مسح طلبات اليوم؟")) {
-    return;
-  }
-
-  try {
-
-    await api("/api/orders/today", {
-      method: "DELETE"
-    });
-
-    toast("تم مسح طلبات اليوم");
-
-    loadOrders();
-
-    loadStats();
-
-  } catch (e) {
-
-    toast(e.message);
-
-  }
-};
+      await loadStats();
 
 
-/* ================= STATISTICS ================= */
+    } catch (e) {
+
+      toast(e.message);
+
+    }
+
+  };
+
+
+/* =========================
+   CLEAR ORDERS
+========================= */
+
+if ($("#clearOrders")) {
+
+  $("#clearOrders").onclick =
+    async () => {
+
+      if (
+        !confirm(
+          "مسح طلبات اليوم؟"
+        )
+      ) {
+        return;
+      }
+
+
+      try {
+
+        await api(
+          "/api/orders/today",
+          {
+            method: "DELETE"
+          }
+        );
+
+
+        toast(
+          "تم مسح طلبات اليوم"
+        );
+
+
+        await loadOrders();
+
+        await loadStats();
+
+
+      } catch (e) {
+
+        toast(e.message);
+
+      }
+
+    };
+
+}
+
+
+/* =========================
+   STATS
+========================= */
 
 async function loadStats() {
 
   try {
 
-    const d = await api("/api/stats");
-
-    $("#statTotal").textContent =
-      d.totalToday;
-
-    $("#statDrink").textContent =
-      d.drinkCounts[0]?.drink || "—";
-
-    $("#statPerson").textContent =
-      d.topPeople[0]?.name || "—";
+    const d =
+      await api("/api/stats");
 
 
-    const max = Math.max(
-      ...d.drinkCounts.map(x => x.count),
-      1
-    );
+    if ($("#statTotal")) {
 
-
-    $("#bars").innerHTML = d.drinkCounts.length
-
-      ? d.drinkCounts.map(x => `
-
-          <div class="bar-row">
-
-            <b>${x.drink}</b>
-
-            <div class="bar-bg">
-
-              <div
-                class="bar-fill"
-                style="width:${x.count / max * 100}%"
-              ></div>
-
-            </div>
-
-            <strong>${x.count}</strong>
-
-          </div>
-
-        `).join("")
-
-      : "لا توجد بيانات بعد.";
-
-  } catch (e) {
-
-    toast(e.message);
-
-  }
-}
-
-
-/* ================= WHEEL ================= */
-
-$("#spin").onclick = async () => {
-
-  try {
-
-    const orders = await api("/api/orders");
-
-    const names = [
-      ...new Set(
-        orders.map(o => o.name)
-      )
-    ];
-
-    if (!names.length) {
-
-      return toast(
-        "سجّلوا طلبات اليوم أولاً"
-      );
+      $("#statTotal").textContent =
+        d.totalToday || 0;
 
     }
 
 
-    const winner =
-      names[
-        Math.floor(
-          Math.random() * names.length
-        )
-      ];
+    if ($("#statDrink")) {
+
+      $("#statDrink").textContent =
+        d.drinkCounts?.[0]?.drink ||
+        "—";
+
+    }
 
 
-    wheelRotation +=
-      1440 +
-      Math.floor(
-        Math.random() * 360
-      );
+    if ($("#statPerson")) {
+
+      $("#statPerson").textContent =
+        d.topPeople?.[0]?.name ||
+        "—";
+
+    }
 
 
-    $("#wheelCircle").style.transform =
-      `rotate(${wheelRotation}deg)`;
+    if (!$("#bars")) {
+      return;
+    }
 
 
-    setTimeout(() => {
-
-      $("#winner").textContent =
-        `🎉 ${winner} يدفع اليوم!`;
-
-    }, 3100);
+    const counts =
+      d.drinkCounts || [];
 
 
-    $("#wheelNames").innerHTML =
-      names.map(n => `
-        <span class="name-chip">
-          ${n}
-        </span>
-      `).join("");
+    const max = Math.max(
+      ...counts.map(x => x.count),
+      1
+    );
+
+
+    $("#bars").innerHTML =
+
+      counts.length
+
+      ?
+
+      counts.map(x => `
+
+        <div class="bar-row">
+
+          <b>
+            ${x.drink}
+          </b>
+
+          <div class="bar-bg">
+
+            <div
+              class="bar-fill"
+              style="
+                width:
+                ${
+                  x.count / max * 100
+                }%
+              "
+            ></div>
+
+          </div>
+
+          <strong>
+            ${x.count}
+          </strong>
+
+        </div>
+
+      `).join("")
+
+      :
+
+      "لا توجد بيانات بعد.";
+
 
   } catch (e) {
 
-    toast(e.message);
+    console.error(
+      "loadStats error:",
+      e
+    );
 
   }
-};
 
+}
+
+
+/* =========================
+   WHEEL
+========================= */
+
+if ($("#spin")) {
+
+  $("#spin").onclick =
+    async () => {
+
+      try {
+
+        const orders =
+          await api("/api/orders");
+
+
+        const names = [
+          ...new Set(
+            orders.map(
+              o => o.name
+            )
+          )
+        ];
+
+
+        if (!names.length) {
+
+          toast(
+            "سجّلوا طلبات اليوم أولاً"
+          );
+
+          return;
+
+        }
+
+
+        const winner =
+          names[
+            Math.floor(
+              Math.random() *
+              names.length
+            )
+          ];
+
+
+        wheelRotation +=
+          1440 +
+          Math.floor(
+            Math.random() * 360
+          );
+
+
+        if ($("#wheelCircle")) {
+
+          $("#wheelCircle")
+            .style
+            .transform =
+            `rotate(
+              ${wheelRotation}deg
+            )`;
+
+        }
+
+
+        setTimeout(() => {
+
+          if ($("#winner")) {
+
+            $("#winner")
+              .textContent =
+              `🎉 ${winner} يدفع اليوم!`;
+
+          }
+
+        }, 3100);
+
+
+        if ($("#wheelNames")) {
+
+          $("#wheelNames").innerHTML =
+            names.map(n => `
+
+              <span
+                class="name-chip"
+              >
+                ${n}
+              </span>
+
+            `).join("");
+
+        }
+
+
+      } catch (e) {
+
+        toast(e.message);
+
+      }
+
+    };
+
+}
+
+
+/* =========================
+   WHEEL NAMES
+========================= */
 
 async function loadWheelNames() {
 
   try {
 
-    const o = await api("/api/orders");
+    const orders =
+      await api("/api/orders");
 
-    $("#wheelNames").innerHTML = [
 
+    const names = [
       ...new Set(
-        o.map(x => x.name)
+        orders.map(
+          x => x.name
+        )
       )
+    ];
 
-    ].map(n => `
-      <span class="name-chip">
-        ${n}
-      </span>
-    `).join("");
+
+    if ($("#wheelNames")) {
+
+      $("#wheelNames").innerHTML =
+        names.map(n => `
+
+          <span
+            class="name-chip"
+          >
+            ${n}
+          </span>
+
+        `).join("");
+
+    }
+
 
   } catch (e) {
 
     toast(e.message);
 
   }
+
 }
 
 
-/* ================= AI REPORT ================= */
+/* =========================
+   AI REPORT
+========================= */
 
-$("#aiBtn").onclick = async () => {
+if ($("#aiBtn")) {
 
-  const b = $("#aiBtn");
+  $("#aiBtn").onclick =
+    async () => {
 
-  b.disabled = true;
+      const button =
+        $("#aiBtn");
 
-  b.textContent = "جاري التحليل…";
 
-  try {
+      button.disabled = true;
 
-    const d = await api(
-      "/api/ai-report",
-      {
-        method: "POST"
+      button.textContent =
+        "جاري التحليل…";
+
+
+      try {
+
+        const d =
+          await api(
+            "/api/ai-report",
+            {
+              method: "POST"
+            }
+          );
+
+
+        if ($("#aiReport")) {
+
+          $("#aiReport")
+            .textContent =
+            d.report || "";
+
+        }
+
+
+      } catch (e) {
+
+        toast(e.message);
+
+      } finally {
+
+        button.disabled = false;
+
+        button.textContent =
+          "إنشاء التقرير";
+
       }
-    );
 
-    $("#aiReport").textContent =
-      d.report;
+    };
 
-  } catch (e) {
-
-    toast(e.message);
-
-  } finally {
-
-    b.disabled = false;
-
-    b.textContent = "إنشاء التقرير";
-  }
-};
+}
 
 
-/* ================= USERS ================= */
+/* =========================
+   USERS
+========================= */
 
 async function loadUsers() {
 
-  if (me?.role !== "admin") {
+  if (
+    me?.role !== "admin"
+  ) {
     return;
   }
+
 
   try {
 
     const users =
       await api("/api/users");
+
+
+    if (!$("#usersTable")) {
+      return;
+    }
 
 
     $("#usersTable").innerHTML = `
@@ -548,10 +961,15 @@ async function loadUsers() {
         <thead>
 
           <tr>
+
             <th>الاسم</th>
+
             <th>Username</th>
+
             <th>الدور</th>
+
             <th></th>
+
           </tr>
 
         </thead>
@@ -583,14 +1001,24 @@ async function loadUsers() {
 
                 ${
                   u.id === me.id
-                  ? ""
-                  : `
-                    <button
-                      class="danger"
-                      onclick="deleteUser(${u.id})"
-                    >
-                      حذف
-                    </button>
+
+                  ?
+
+                  ""
+
+                  :
+
+                  `
+
+                  <button
+                    class="danger"
+                    onclick="
+                      deleteUser(${u.id})
+                    "
+                  >
+                    حذف
+                  </button>
+
                   `
                 }
 
@@ -603,87 +1031,126 @@ async function loadUsers() {
         </tbody>
 
       </table>
+
     `;
+
 
   } catch (e) {
 
     toast(e.message);
 
   }
+
 }
 
 
-/* ================= DELETE USER ================= */
+/* =========================
+   DELETE USER
+========================= */
 
-window.deleteUser = async id => {
+window.deleteUser =
+  async id => {
 
-  if (!confirm("حذف المستخدم؟")) {
-    return;
-  }
-
-  try {
-
-    await api(`/api/users/${id}`, {
-      method: "DELETE"
-    });
-
-    toast("تم حذف المستخدم");
-
-    loadUsers();
-
-  } catch (e) {
-
-    toast(e.message);
-
-  }
-};
+    if (
+      !confirm(
+        "حذف المستخدم؟"
+      )
+    ) {
+      return;
+    }
 
 
-/* ================= CREATE USER ================= */
+    try {
 
-$("#userForm").onsubmit = async e => {
-
-  e.preventDefault();
-
-  try {
-
-    await api("/api/users", {
-
-      method: "POST",
-
-      body: JSON.stringify({
-
-        name: $("#newName").value,
-
-        username:
-          $("#newUsername").value,
-
-        password:
-          $("#newPassword").value,
-
-        role:
-          $("#newRole").value
-
-      })
-
-    });
+      await api(
+        `/api/users/${id}`,
+        {
+          method: "DELETE"
+        }
+      );
 
 
-    e.target.reset();
-
-    toast("تم إنشاء المستخدم");
-
-    loadUsers();
-
-  } catch (e) {
-
-    toast(e.message);
-
-  }
-};
+      toast(
+        "تم حذف المستخدم"
+      );
 
 
-/* ================= NAVIGATION ================= */
+      loadUsers();
+
+
+    } catch (e) {
+
+      toast(e.message);
+
+    }
+
+  };
+
+
+/* =========================
+   CREATE USER
+========================= */
+
+if ($("#userForm")) {
+
+  $("#userForm").onsubmit =
+    async e => {
+
+      e.preventDefault();
+
+
+      try {
+
+        await api(
+          "/api/users",
+          {
+            method: "POST",
+
+            body: JSON.stringify({
+
+              name:
+                $("#newName").value,
+
+              username:
+                $("#newUsername").value,
+
+              password:
+                $("#newPassword").value,
+
+              role:
+                $("#newRole").value
+
+            })
+
+          }
+        );
+
+
+        e.target.reset();
+
+
+        toast(
+          "تم إنشاء المستخدم"
+        );
+
+
+        loadUsers();
+
+
+      } catch (e) {
+
+        toast(e.message);
+
+      }
+
+    };
+
+}
+
+
+/* =========================
+   NAVIGATION
+========================= */
 
 document
   .querySelectorAll("nav button")
@@ -694,7 +1161,9 @@ document
       document
         .querySelectorAll("nav button")
         .forEach(x =>
-          x.classList.remove("active")
+          x.classList.remove(
+            "active"
+          )
         );
 
 
@@ -713,6 +1182,7 @@ document
       const section =
         $("#" + btn.dataset.section);
 
+
       if (section) {
 
         section.classList.add(
@@ -722,12 +1192,17 @@ document
       }
 
 
-      $("#pageTitle").textContent =
-        btn.innerText.trim();
+      if ($("#pageTitle")) {
+
+        $("#pageTitle").textContent =
+          btn.innerText.trim();
+
+      }
 
 
       if (
-        btn.dataset.section === "wheel"
+        btn.dataset.section ===
+        "wheel"
       ) {
 
         loadWheelNames();
@@ -739,7 +1214,9 @@ document
   });
 
 
-/* ================= AUTO LOGIN ================= */
+/* =========================
+   CHECK LOGIN
+========================= */
 
 (async () => {
 
@@ -747,6 +1224,7 @@ document
 
     const d =
       await api("/api/me");
+
 
     if (d.user) {
 
@@ -756,6 +1234,12 @@ document
 
     }
 
-  } catch {}
+  } catch (e) {
+
+    console.log(
+      "Not logged in"
+    );
+
+  }
 
 })();
