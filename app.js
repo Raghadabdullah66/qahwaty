@@ -1,6 +1,6 @@
 const API_BASE = "https://qahwaty-backend-bu24.onrender.com";
 
-const $ = s => document.querySelector(s);
+const $ = (selector) => document.querySelector(selector);
 
 let me = null;
 let selectedDrink = "Latte";
@@ -26,18 +26,48 @@ const icons = {
 
 
 /* =========================
-   TOAST
+   API
 ========================= */
 
-function toast(msg) {
+async function api(url, options = {}) {
+
+  const response = await fetch(API_BASE + url, {
+    ...options,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      data.message ||
+      `حدث خطأ (${response.status})`
+    );
+  }
+
+  return data;
+}
+
+
+/* =========================
+   Toast
+========================= */
+
+function toast(message) {
+
   const t = $("#toast");
 
   if (!t) {
-    alert(msg);
+    alert(message);
     return;
   }
 
-  t.textContent = msg;
+  t.textContent = message;
   t.classList.add("show");
 
   setTimeout(() => {
@@ -47,40 +77,7 @@ function toast(msg) {
 
 
 /* =========================
-   API
-========================= */
-
-async function api(url, opt = {}) {
-
-  const options = {
-    credentials: "include",
-
-    headers: {
-      "Content-Type": "application/json"
-    },
-
-    ...opt,
-
-    headers: {
-      "Content-Type": "application/json",
-      ...(opt.headers || {})
-    }
-  };
-
-  const r = await fetch(API_BASE + url, options);
-
-  const d = await r.json().catch(() => ({}));
-
-  if (!r.ok) {
-    throw Error(d.error || "حدث خطأ");
-  }
-
-  return d;
-}
-
-
-/* =========================
-   ROLE
+   Roles
 ========================= */
 
 function roleName(role) {
@@ -97,34 +94,43 @@ function roleName(role) {
    LOGIN
 ========================= */
 
-if ($("#loginForm")) {
+const loginForm = $("#loginForm");
 
-  $("#loginForm").onsubmit = async e => {
+if (loginForm) {
+
+  loginForm.onsubmit = async (e) => {
 
     e.preventDefault();
 
     try {
 
-      const d = await api("/api/login", {
-        method: "POST",
+      const username = $("#username").value.trim();
+      const password = $("#password").value;
 
+      if (!username || !password) {
+        toast("اكتب اسم المستخدم وكلمة المرور");
+        return;
+      }
+
+      const data = await api("/api/login", {
+        method: "POST",
         body: JSON.stringify({
-          username: $("#username").value.trim(),
-          password: $("#password").value
+          username,
+          password
         })
       });
 
-      me = d.user;
+      me = data.user;
 
       start();
 
-    } catch (e) {
+    } catch (error) {
 
-      toast(e.message);
+      console.error(error);
+      toast(error.message);
 
     }
   };
-
 }
 
 
@@ -132,72 +138,58 @@ if ($("#loginForm")) {
    LOGOUT
 ========================= */
 
-if ($("#logout")) {
+const logoutButton = $("#logout");
 
-  $("#logout").onclick = async () => {
+if (logoutButton) {
+
+  logoutButton.onclick = async () => {
 
     try {
-
       await api("/api/logout", {
         method: "POST"
       });
-
-    } catch {}
+    } catch (error) {
+      console.error(error);
+    }
 
     location.reload();
-
   };
-
 }
 
 
 /* =========================
-   START
+   START APP
 ========================= */
 
 function start() {
 
-  if ($("#loginView")) {
-    $("#loginView").classList.add("hidden");
-  }
-
-  if ($("#app")) {
-    $("#app").classList.remove("hidden");
-  }
+  $("#loginView")?.classList.add("hidden");
+  $("#app")?.classList.remove("hidden");
 
   if ($("#hello")) {
-    $("#hello").textContent =
-      `مرحباً، ${me.name}`;
+    $("#hello").textContent = `مرحباً، ${me.name}`;
   }
 
   if ($("#profileName")) {
-    $("#profileName").textContent =
-      me.name;
+    $("#profileName").textContent = me.name;
   }
 
   if ($("#profileRole")) {
-    $("#profileRole").textContent =
-      roleName(me.role);
+    $("#profileRole").textContent = roleName(me.role);
   }
 
   if ($("#avatar")) {
-    $("#avatar").textContent =
-      me.name?.[0] || "☕";
+    $("#avatar").textContent = me.name?.[0] || "☕";
   }
 
-  if (
-    me.role !== "admin" &&
-    $("#usersNav")
-  ) {
+  if (me.role !== "admin" && $("#usersNav")) {
     $("#usersNav").style.display = "none";
   }
 
   renderDrinks();
 
   loadOrders();
-
   loadStats();
-
   loadUsers();
 }
 
@@ -208,43 +200,32 @@ function start() {
 
 function renderDrinks() {
 
-  const g = $("#drinkGrid");
+  const grid = $("#drinkGrid");
 
-  if (!g) return;
+  if (!grid) return;
 
-  g.innerHTML = drinks.map(d => `
+  grid.innerHTML = drinks
+    .map(drink => `
+      <button
+        type="button"
+        class="drink-option ${drink === selectedDrink ? "selected" : ""}"
+        data-drink="${drink}"
+      >
+        <span>${icons[drink]}</span>
+        ${drink}
+      </button>
+    `)
+    .join("");
 
-    <button
-      type="button"
-      class="drink-option ${
-        d === selectedDrink ? "selected" : ""
-      }"
-      data-drink="${d}"
-    >
+  grid.querySelectorAll(".drink-option").forEach(button => {
 
-      <span>${icons[d]}</span>
+    button.onclick = () => {
 
-      ${d}
+      selectedDrink = button.dataset.drink;
 
-    </button>
-
-  `).join("");
-
-
-  g.querySelectorAll(".drink-option")
-    .forEach(button => {
-
-      button.onclick = () => {
-
-        selectedDrink =
-          button.dataset.drink;
-
-        renderDrinks();
-
-      };
-
-    });
-
+      renderDrinks();
+    };
+  });
 }
 
 
@@ -252,64 +233,49 @@ function renderDrinks() {
    ADD ORDER
 ========================= */
 
-if ($("#orderForm")) {
+const orderForm = $("#orderForm");
 
-  $("#orderForm").onsubmit = async e => {
+if (orderForm) {
+
+  orderForm.onsubmit = async (e) => {
 
     e.preventDefault();
 
     try {
 
-      const size =
-        $("#size")?.value || "";
+      const name = $("#name")?.value?.trim();
 
-      const extra =
-        $("#extra")?.value || "";
+      const size = $("#size")?.value;
 
+      const extra = $("#extra")?.value?.trim() || "";
 
-      if (!me) {
-
-        toast("يجب تسجيل الدخول أولاً");
-
+      if (!name) {
+        toast("اكتب اسمك أولاً");
         return;
-
       }
-
 
       if (!selectedDrink) {
-
-        toast("اختاري المشروب أولاً");
-
+        toast("اختر المشروب");
         return;
-
       }
-
 
       if (!size) {
-
-        toast("اختاري الحجم أولاً");
-
+        toast("اختر الحجم");
         return;
-
       }
-
 
       await api("/api/orders", {
 
         method: "POST",
 
         body: JSON.stringify({
-
+          name,
           drink: selectedDrink,
-
-          size: size,
-
-          extra: extra
-
+          size,
+          extra
         })
 
       });
-
 
       toast("تم تسجيل طلبك ☕");
 
@@ -317,22 +283,16 @@ if ($("#orderForm")) {
         $("#extra").value = "";
       }
 
-
       await loadOrders();
-
       await loadStats();
 
+    } catch (error) {
 
-    } catch (e) {
+      console.error("ADD ORDER ERROR:", error);
 
-      toast(e.message);
-
-      console.error(e);
-
+      toast(error.message);
     }
-
   };
-
 }
 
 
@@ -344,383 +304,260 @@ async function loadOrders() {
 
   try {
 
-    const orders =
-      await api("/api/orders");
-
+    const orders = await api("/api/orders");
 
     if ($("#todayTotal")) {
-
-      $("#todayTotal").textContent =
-        orders.length;
-
+      $("#todayTotal").textContent = orders.length;
     }
-
 
     if ($("#miniList")) {
 
       $("#miniList").innerHTML =
-
         orders
           .slice(0, 4)
-          .map(o => `
-
+          .map(order => `
             <div class="mini-item">
-
-              <span>
-                ${o.name}
-              </span>
-
-              <b>
-                ${o.drink}
-              </b>
-
+              <span>${order.name}</span>
+              <b>${order.drink}</b>
             </div>
-
           `)
           .join("")
-
         ||
-
         "<small>لا توجد طلبات بعد.</small>";
-
     }
 
 
     const canRun =
-      ["runner", "admin"].includes(me?.role);
+      me &&
+      ["runner", "admin"].includes(me.role);
 
-
-    if (!$("#ordersTable")) {
-      return;
-    }
-
-
-    $("#ordersTable").innerHTML =
-
-      orders.length
-
-      ?
-
-      `
-
-      <table class="table">
-
-        <thead>
-
-          <tr>
-
-            <th>الاسم</th>
-
-            <th>المشروب</th>
-
-            <th>الحجم</th>
-
-            <th>الإضافة</th>
-
-            <th>الحالة</th>
-
-          </tr>
-
-        </thead>
-
-
-        <tbody>
-
-          ${orders.map(o => `
-
-            <tr
-              class="${
-                o.completed
-                  ? "done"
-                  : ""
-              }"
-            >
-
-              <td>
-                ${o.name}
-              </td>
-
-              <td>
-                ${o.drink}
-              </td>
-
-              <td>
-
-                <span class="pill">
-                  ${o.size}
-                </span>
-
-              </td>
-
-              <td>
-                ${o.extra || "—"}
-              </td>
-
-              <td>
-
-                ${
-                  canRun
-
-                  ?
-
-                  `
-
-                  <input
-                    type="checkbox"
-                    ${
-                      o.completed
-                        ? "checked"
-                        : ""
-                    }
-                    onchange="
-                      toggleOrder(
-                        ${o.id},
-                        this.checked
-                      )
-                    "
-                  >
-
-                  `
-
-                  :
-
-                  (
-
-                    o.completed
-
-                    ?
-
-                    "✓ جاهز"
-
-                    :
-
-                    "قيد التجهيز"
-
-                  )
-                }
-
-              </td>
-
-            </tr>
-
-          `).join("")}
-
-        </tbody>
-
-      </table>
-
-      `
-
-      :
-
-      "<p>ما في طلبات اليوم 🤎</p>";
-
-
-  } catch (e) {
-
-    console.error(
-      "loadOrders error:",
-      e
-    );
 
     if ($("#ordersTable")) {
 
-      $("#ordersTable").innerHTML =
-        "<p>تعذر تحميل الطلبات.</p>";
+      if (!orders.length) {
 
+        $("#ordersTable").innerHTML =
+          "<p>ما في طلبات اليوم 🤎</p>";
+
+        return;
+      }
+
+
+      $("#ordersTable").innerHTML = `
+
+        <table class="table">
+
+          <thead>
+
+            <tr>
+              <th>الاسم</th>
+              <th>المشروب</th>
+              <th>الحجم</th>
+              <th>الإضافة</th>
+              <th>الحالة</th>
+            </tr>
+
+          </thead>
+
+          <tbody>
+
+            ${orders.map(order => `
+
+              <tr class="${order.completed ? "done" : ""}">
+
+                <td>${order.name}</td>
+
+                <td>${order.drink}</td>
+
+                <td>
+                  <span class="pill">
+                    ${order.size}
+                  </span>
+                </td>
+
+                <td>
+                  ${order.extra || "—"}
+                </td>
+
+                <td>
+
+                  ${
+                    canRun
+
+                      ? `
+                        <input
+                          type="checkbox"
+                          ${order.completed ? "checked" : ""}
+                          onchange="toggleOrder(${order.id}, this.checked)"
+                        >
+                      `
+
+                      : (
+                        order.completed
+                          ? "✓ جاهز"
+                          : "قيد التجهيز"
+                      )
+                  }
+
+                </td>
+
+              </tr>
+
+            `).join("")}
+
+          </tbody>
+
+        </table>
+
+      `;
     }
 
-  }
+  } catch (error) {
 
+    console.error("LOAD ORDERS ERROR:", error);
+
+    toast(error.message);
+  }
 }
 
 
 /* =========================
-   TOGGLE ORDER
+   COMPLETE ORDER
 ========================= */
 
-window.toggleOrder =
-  async (id, checked) => {
+window.toggleOrder = async function(id, checked) {
 
-    try {
+  try {
 
-      await api(
-        `/api/orders/${id}`,
-        {
-          method: "PATCH",
+    await api(`/api/orders/${id}`, {
 
-          body: JSON.stringify({
-            completed: checked
-          })
-        }
-      );
+      method: "PATCH",
 
-      await loadOrders();
+      body: JSON.stringify({
+        completed: checked
+      })
 
-      await loadStats();
+    });
 
+    await loadOrders();
 
-    } catch (e) {
+  } catch (error) {
 
-      toast(e.message);
+    console.error(error);
 
-    }
-
-  };
+    toast(error.message);
+  }
+};
 
 
 /* =========================
    CLEAR ORDERS
 ========================= */
 
-if ($("#clearOrders")) {
+const clearOrders = $("#clearOrders");
 
-  $("#clearOrders").onclick =
-    async () => {
+if (clearOrders) {
 
-      if (
-        !confirm(
-          "مسح طلبات اليوم؟"
-        )
-      ) {
-        return;
-      }
+  clearOrders.onclick = async () => {
 
+    if (!confirm("مسح طلبات اليوم؟")) {
+      return;
+    }
 
-      try {
+    try {
 
-        await api(
-          "/api/orders/today",
-          {
-            method: "DELETE"
-          }
-        );
+      await api("/api/orders/today", {
+        method: "DELETE"
+      });
 
+      toast("تم مسح طلبات اليوم");
 
-        toast(
-          "تم مسح طلبات اليوم"
-        );
+      await loadOrders();
+      await loadStats();
 
+    } catch (error) {
 
-        await loadOrders();
+      console.error(error);
 
-        await loadStats();
-
-
-      } catch (e) {
-
-        toast(e.message);
-
-      }
-
-    };
-
+      toast(error.message);
+    }
+  };
 }
 
 
 /* =========================
-   STATS
+   STATISTICS
 ========================= */
 
 async function loadStats() {
 
   try {
 
-    const d =
-      await api("/api/stats");
+    const data = await api("/api/stats");
 
 
     if ($("#statTotal")) {
-
       $("#statTotal").textContent =
-        d.totalToday || 0;
-
+        data.totalToday || 0;
     }
 
 
     if ($("#statDrink")) {
 
       $("#statDrink").textContent =
-        d.drinkCounts?.[0]?.drink ||
-        "—";
-
+        data.drinkCounts?.[0]?.drink || "—";
     }
 
 
     if ($("#statPerson")) {
 
       $("#statPerson").textContent =
-        d.topPeople?.[0]?.name ||
-        "—";
-
+        data.topPeople?.[0]?.name || "—";
     }
 
 
-    if (!$("#bars")) {
-      return;
+    if ($("#bars")) {
+
+      const counts = data.drinkCounts || [];
+
+      const max = Math.max(
+        ...counts.map(x => x.count),
+        1
+      );
+
+
+      $("#bars").innerHTML = counts.length
+
+        ? counts.map(x => `
+
+            <div class="bar-row">
+
+              <b>${x.drink}</b>
+
+              <div class="bar-bg">
+
+                <div
+                  class="bar-fill"
+                  style="width:${(x.count / max) * 100}%"
+                ></div>
+
+              </div>
+
+              <strong>${x.count}</strong>
+
+            </div>
+
+          `).join("")
+
+        : "لا توجد بيانات بعد.";
     }
 
+  } catch (error) {
 
-    const counts =
-      d.drinkCounts || [];
+    console.error("STATS ERROR:", error);
 
-
-    const max = Math.max(
-      ...counts.map(x => x.count),
-      1
-    );
-
-
-    $("#bars").innerHTML =
-
-      counts.length
-
-      ?
-
-      counts.map(x => `
-
-        <div class="bar-row">
-
-          <b>
-            ${x.drink}
-          </b>
-
-          <div class="bar-bg">
-
-            <div
-              class="bar-fill"
-              style="
-                width:
-                ${
-                  x.count / max * 100
-                }%
-              "
-            ></div>
-
-          </div>
-
-          <strong>
-            ${x.count}
-          </strong>
-
-        </div>
-
-      `).join("")
-
-      :
-
-      "لا توجد بيانات بعد.";
-
-
-  } catch (e) {
-
-    console.error(
-      "loadStats error:",
-      e
-    );
-
+    toast(error.message);
   }
-
 }
 
 
@@ -728,102 +565,83 @@ async function loadStats() {
    WHEEL
 ========================= */
 
-if ($("#spin")) {
+const spinButton = $("#spin");
 
-  $("#spin").onclick =
-    async () => {
+if (spinButton) {
 
-      try {
+  spinButton.onclick = async () => {
 
-        const orders =
-          await api("/api/orders");
+    try {
+
+      const orders = await api("/api/orders");
+
+      const names = [
+        ...new Set(
+          orders.map(order => order.name)
+        )
+      ];
 
 
-        const names = [
-          ...new Set(
-            orders.map(
-              o => o.name
-            )
+      if (!names.length) {
+
+        toast(
+          "سجّلوا طلبات اليوم أولاً"
+        );
+
+        return;
+      }
+
+
+      const winner =
+        names[
+          Math.floor(
+            Math.random() * names.length
           )
         ];
 
 
-        if (!names.length) {
-
-          toast(
-            "سجّلوا طلبات اليوم أولاً"
-          );
-
-          return;
-
-        }
+      wheelRotation +=
+        1440 +
+        Math.floor(Math.random() * 360);
 
 
-        const winner =
-          names[
-            Math.floor(
-              Math.random() *
-              names.length
-            )
-          ];
+      if ($("#wheelCircle")) {
 
-
-        wheelRotation +=
-          1440 +
-          Math.floor(
-            Math.random() * 360
-          );
-
-
-        if ($("#wheelCircle")) {
-
-          $("#wheelCircle")
-            .style
-            .transform =
-            `rotate(
-              ${wheelRotation}deg
-            )`;
-
-        }
-
-
-        setTimeout(() => {
-
-          if ($("#winner")) {
-
-            $("#winner")
-              .textContent =
-              `🎉 ${winner} يدفع اليوم!`;
-
-          }
-
-        }, 3100);
-
-
-        if ($("#wheelNames")) {
-
-          $("#wheelNames").innerHTML =
-            names.map(n => `
-
-              <span
-                class="name-chip"
-              >
-                ${n}
-              </span>
-
-            `).join("");
-
-        }
-
-
-      } catch (e) {
-
-        toast(e.message);
-
+        $("#wheelCircle").style.transform =
+          `rotate(${wheelRotation}deg)`;
       }
 
-    };
 
+      setTimeout(() => {
+
+        if ($("#winner")) {
+
+          $("#winner").textContent =
+            `🎉 ${winner} يدفع اليوم!`;
+        }
+
+      }, 3100);
+
+
+      if ($("#wheelNames")) {
+
+        $("#wheelNames").innerHTML =
+          names
+            .map(name => `
+              <span class="name-chip">
+                ${name}
+              </span>
+            `)
+            .join("");
+      }
+
+    } catch (error) {
+
+      console.error(error);
+
+      toast(error.message);
+    }
+  };
 }
 
 
@@ -838,12 +656,9 @@ async function loadWheelNames() {
     const orders =
       await api("/api/orders");
 
-
     const names = [
       ...new Set(
-        orders.map(
-          x => x.name
-        )
+        orders.map(order => order.name)
       )
     ];
 
@@ -851,25 +666,21 @@ async function loadWheelNames() {
     if ($("#wheelNames")) {
 
       $("#wheelNames").innerHTML =
-        names.map(n => `
-
-          <span
-            class="name-chip"
-          >
-            ${n}
-          </span>
-
-        `).join("");
-
+        names
+          .map(name => `
+            <span class="name-chip">
+              ${name}
+            </span>
+          `)
+          .join("");
     }
 
+  } catch (error) {
 
-  } catch (e) {
+    console.error(error);
 
-    toast(e.message);
-
+    toast(error.message);
   }
-
 }
 
 
@@ -877,56 +688,43 @@ async function loadWheelNames() {
    AI REPORT
 ========================= */
 
-if ($("#aiBtn")) {
+const aiButton = $("#aiBtn");
 
-  $("#aiBtn").onclick =
-    async () => {
+if (aiButton) {
 
-      const button =
-        $("#aiBtn");
+  aiButton.onclick = async () => {
 
+    aiButton.disabled = true;
+    aiButton.textContent =
+      "جاري التحليل…";
 
-      button.disabled = true;
+    try {
 
-      button.textContent =
-        "جاري التحليل…";
-
-
-      try {
-
-        const d =
-          await api(
-            "/api/ai-report",
-            {
-              method: "POST"
-            }
-          );
+      const data =
+        await api("/api/ai-report", {
+          method: "POST"
+        });
 
 
-        if ($("#aiReport")) {
+      if ($("#aiReport")) {
 
-          $("#aiReport")
-            .textContent =
-            d.report || "";
-
-        }
-
-
-      } catch (e) {
-
-        toast(e.message);
-
-      } finally {
-
-        button.disabled = false;
-
-        button.textContent =
-          "إنشاء التقرير";
-
+        $("#aiReport").textContent =
+          data.report || "لا يوجد تقرير";
       }
 
-    };
+    } catch (error) {
 
+      console.error(error);
+
+      toast(error.message);
+
+    } finally {
+
+      aiButton.disabled = false;
+      aiButton.textContent =
+        "إنشاء التقرير";
+    }
+  };
 }
 
 
@@ -936,12 +734,9 @@ if ($("#aiBtn")) {
 
 async function loadUsers() {
 
-  if (
-    me?.role !== "admin"
-  ) {
+  if (!me || me.role !== "admin") {
     return;
   }
-
 
   try {
 
@@ -961,65 +756,43 @@ async function loadUsers() {
         <thead>
 
           <tr>
-
             <th>الاسم</th>
-
             <th>Username</th>
-
             <th>الدور</th>
-
             <th></th>
-
           </tr>
 
         </thead>
 
-
         <tbody>
 
-          ${users.map(u => `
+          ${users.map(user => `
 
             <tr>
 
-              <td>
-                ${u.name}
-              </td>
+              <td>${user.name}</td>
+
+              <td>${user.username}</td>
 
               <td>
-                ${u.username}
-              </td>
-
-              <td>
-
                 <span class="pill">
-                  ${roleName(u.role)}
+                  ${roleName(user.role)}
                 </span>
-
               </td>
 
               <td>
 
                 ${
-                  u.id === me.id
-
-                  ?
-
-                  ""
-
-                  :
-
-                  `
-
-                  <button
-                    class="danger"
-                    onclick="
-                      deleteUser(${u.id})
-                    "
-                  >
-                    حذف
-                  </button>
-
-                  `
+                  user.id === me.id
+                    ? ""
+                    : `
+                      <button
+                        class="danger"
+                        onclick="deleteUser(${user.id})"
+                      >
+                        حذف
+                      </button>
+                    `
                 }
 
               </td>
@@ -1034,13 +807,12 @@ async function loadUsers() {
 
     `;
 
+  } catch (error) {
 
-  } catch (e) {
+    console.error(error);
 
-    toast(e.message);
-
+    toast(error.message);
   }
-
 }
 
 
@@ -1048,103 +820,80 @@ async function loadUsers() {
    DELETE USER
 ========================= */
 
-window.deleteUser =
-  async id => {
+window.deleteUser = async function(id) {
 
-    if (
-      !confirm(
-        "حذف المستخدم؟"
-      )
-    ) {
-      return;
-    }
+  if (!confirm("حذف المستخدم؟")) {
+    return;
+  }
 
+  try {
 
-    try {
+    await api(`/api/users/${id}`, {
+      method: "DELETE"
+    });
 
-      await api(
-        `/api/users/${id}`,
-        {
-          method: "DELETE"
-        }
-      );
+    toast("تم حذف المستخدم");
 
+    await loadUsers();
 
-      toast(
-        "تم حذف المستخدم"
-      );
+  } catch (error) {
 
+    console.error(error);
 
-      loadUsers();
-
-
-    } catch (e) {
-
-      toast(e.message);
-
-    }
-
-  };
+    toast(error.message);
+  }
+};
 
 
 /* =========================
    CREATE USER
 ========================= */
 
-if ($("#userForm")) {
+const userForm = $("#userForm");
 
-  $("#userForm").onsubmit =
-    async e => {
+if (userForm) {
 
-      e.preventDefault();
+  userForm.onsubmit = async (e) => {
 
+    e.preventDefault();
 
-      try {
+    try {
 
-        await api(
-          "/api/users",
-          {
-            method: "POST",
+      await api("/api/users", {
 
-            body: JSON.stringify({
+        method: "POST",
 
-              name:
-                $("#newName").value,
+        body: JSON.stringify({
 
-              username:
-                $("#newUsername").value,
+          name: $("#newName").value.trim(),
 
-              password:
-                $("#newPassword").value,
+          username:
+            $("#newUsername").value.trim(),
 
-              role:
-                $("#newRole").value
+          password:
+            $("#newPassword").value,
 
-            })
+          role:
+            $("#newRole").value
 
-          }
-        );
+        })
+
+      });
 
 
-        e.target.reset();
+      userForm.reset();
 
+      toast("تم إنشاء المستخدم");
 
-        toast(
-          "تم إنشاء المستخدم"
-        );
+      await loadUsers();
 
+    } catch (error) {
 
-        loadUsers();
+      console.error(error);
 
-
-      } catch (e) {
-
-        toast(e.message);
-
-      }
-
-    };
-
+      toast(error.message);
+    }
+  };
 }
 
 
@@ -1154,59 +903,51 @@ if ($("#userForm")) {
 
 document
   .querySelectorAll("nav button")
-  .forEach(btn => {
+  .forEach(button => {
 
-    btn.onclick = () => {
+    button.onclick = () => {
 
       document
         .querySelectorAll("nav button")
-        .forEach(x =>
-          x.classList.remove(
-            "active"
-          )
+        .forEach(btn =>
+          btn.classList.remove("active")
         );
 
-
-      btn.classList.add("active");
+      button.classList.add("active");
 
 
       document
         .querySelectorAll(".section")
-        .forEach(s =>
-          s.classList.remove(
+        .forEach(section =>
+          section.classList.remove(
             "active-section"
           )
         );
 
 
       const section =
-        $("#" + btn.dataset.section);
+        $("#" + button.dataset.section);
 
 
       if (section) {
-
         section.classList.add(
           "active-section"
         );
-
       }
 
 
       if ($("#pageTitle")) {
 
         $("#pageTitle").textContent =
-          btn.innerText.trim();
-
+          button.innerText.trim();
       }
 
 
       if (
-        btn.dataset.section ===
-        "wheel"
+        button.dataset.section === "wheel"
       ) {
 
         loadWheelNames();
-
       }
 
     };
@@ -1218,26 +959,24 @@ document
    CHECK LOGIN
 ========================= */
 
-(async () => {
+(async function () {
 
   try {
 
-    const d =
+    const data =
       await api("/api/me");
 
+    if (data.user) {
 
-    if (d.user) {
-
-      me = d.user;
+      me = data.user;
 
       start();
-
     }
 
-  } catch (e) {
+  } catch (error) {
 
     console.log(
-      "Not logged in"
+      "Not logged in yet."
     );
 
   }
