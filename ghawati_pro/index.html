@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Qahwaty ☕</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            ☕ Qahwaty
+        </div>
+
+        <nav>
+            <a href="#home">الرئيسية</a>
+            <a href="#orders">طلبات اليوم</a>
+            <a href="#contact">تواصل معي</a>
+        </nav>
+    </header>
+
+
+    <main id="home">
+
+        <!-- Hero -->
+        <section class="hero">
+            <div class="hero-content">
+                <span class="coffee-icon">☕</span>
+
+                <h1>قهوتي</h1>
+
+                <p>
+                    اطلب قهوتك للفريق بسهولة 🤎
+                </p>
+
+                <p class="small-text">
+                    لا مزيد من فوضى طلبات القهوة!
+                </p>
+            </div>
+        </section>
+
+
+        <!-- Order Form -->
+        <section class="order-section">
+
+            <div class="section-title">
+                <span>☕</span>
+                <h2>أضف طلبك</h2>
+                <p>اختر قهوتك المفضلة</p>
+            </div>
+
+
+            <form id="orderForm" class="order-form">
+
+                <!-- Name -->
+                <div class="form-group">
+                    <label for="name">الاسم</label>
+
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        placeholder="اكتب اسمك"
+                        required
+                    >
+                </div>
+
+
+                <!-- Drink -->
+                <div class="form-group">
+                    <label for="drink">المشروب</label>
+
+                    <select id="drink" name="drink" required>
+
+                        <option value="">
+                            اختر مشروبك
+                        </option>
+
+                        <option value="Espresso">
+                            Espresso
+                        </option>
+
+                        <option value="Latte">
+                            Latte
+                        </option>
+
+                        <option value="Cappuccino">
+                            Cappuccino
+                        </option>
+
+                        <option value="Flat White">
+                            Flat White
+                        </option>
+
+                        <option value="V60">
+                            V60
+                        </option>
+
+                        <option value="Turkish Coffee">
+                            Turkish Coffee
+                        </option>
+
+                        <option value="Karak Tea">
+                            Karak Tea
+                        </option>
+
+                    </select>
+                </div>
+
+
+                <!-- Size -->
+                <div class="form-group">
+
+                    <label for="size">
+                        الحجم
+                    </label>
+
+                    <select id="size" name="size" required>
+
+                        <option value="">
+                            اختر الحجم
+                        </option>
+
+                        <option value="Small">
+                            Small
+                        </option>
+
+                        <option value="Medium">
+                            Medium
+                        </option>
+
+                        <option value="Large">
+                            Large
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- Notes -->
+                <div class="form-group">
+
+                    <label for="notes">
+                        ملاحظات
+                        <span>(اختياري)</span>
+                    </label>
+
+                    <textarea
+                        id="notes"
+                        name="notes"
+                        rows="3"
+                        placeholder="مثلاً: extra hot"
+                    ></textarea>
+
+                </div>
+
+
+                <!-- Submit -->
+                <button
+                    type="submit"
+                    class="add-button"
+                >
+                    ☕ إضافة الطلب
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <!-- Today's Orders -->
+        <section id="orders" class="orders-section">
+
+            <div class="section-title">
+
+                <span>📋</span>
+
+                <h2>
+                    طلبات اليوم
+                </h2>
+
+                <p>
+                    جميع طلبات الفريق
+                </p>
+
+            </div>
+
+
+            <div
+                id="ordersContainer"
+                class="orders-container"
+            >
+
+                <!-- Orders will appear here -->
+
+                <div
+                    id="emptyMessage"
+                    class="empty-message"
+                >
+                    <span>☕</span>
+
+                    <h3>
+                        لا توجد طلبات بعد
+                    </h3>
+
+                    <p>
+                        كن أول شخص يطلب قهوته!
+                    </p>
+                </div>
+
+            </div>
+
+
+            <!-- Clear Orders -->
+            <button
+                id="clearOrders"
+                class="clear-button"
+                type="button"
+            >
+                🗑️ Clear all orders
+            </button>
+
+        </section>
+
+
+        <!-- Contact -->
+        <section
+            id="contact"
+            class="contact-section"
+        >
+
+            <div class="section-title">
+
+                <span>🤎</span>
+
+                <h2>
+                    تواصل معي
+                </h2>
+
+                <p>
+                    يسعدني تواصلك معي
+                </p>
+
+            </div>
+
+
+            <div class="social-links">
+
+                <a
+                    href="https://www.linkedin.com/in/raghad-abdullah-107174364"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="social-link"
+                >
+                    💼 LinkedIn
+                </a>
+
+
+                <a
+                    href="https://www.instagram.com/_r3ag_/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="social-link"
+                >
+                    📸 Instagram
+                </a>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- Footer -->
+    <footer>
+
+        <p>
+            ☕ Qahwaty — قهوتك، على كيفك 🤎
+        </p>
+
+        <p>
+            © 2026 جميع الحقوق محفوظة
+        </p>
+
+    </footer>
+
+
+    <script src="app.js"></script>
+
+</body>
+</html>

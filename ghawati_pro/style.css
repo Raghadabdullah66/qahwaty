@@ -1,0 +1,374 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f8f1e8;
+    color: #3e2723;
+    line-height: 1.6;
+}
+
+/* ================= HEADER ================= */
+
+.header {
+    background: #4b2e22;
+    color: white;
+    padding: 18px 8%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+}
+
+.logo {
+    font-size: 25px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+nav {
+    display: flex;
+    gap: 25px;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    font-size: 15px;
+    transition: 0.3s;
+}
+
+nav a:hover {
+    color: #e7a35c;
+}
+
+
+/* ================= HERO ================= */
+
+.hero {
+    min-height: 55vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 70px 20px;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.7), transparent 30%),
+        linear-gradient(135deg, #f8eee2, #e9d0b4);
+}
+
+.hero-content {
+    max-width: 650px;
+}
+
+.coffee-icon {
+    font-size: 65px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.hero h1 {
+    font-size: 72px;
+    color: #5d4037;
+    margin-bottom: 5px;
+}
+
+.hero p {
+    font-size: 23px;
+    font-weight: bold;
+}
+
+.hero .small-text {
+    font-size: 15px;
+    font-weight: normal;
+    color: #795548;
+    margin-top: 8px;
+}
+
+
+/* ================= SECTIONS ================= */
+
+.order-section,
+.orders-section,
+.contact-section {
+    padding: 75px 10%;
+}
+
+.order-section {
+    background: #fff;
+}
+
+.section-title {
+    text-align: center;
+    margin-bottom: 35px;
+}
+
+.section-title > span {
+    font-size: 30px;
+}
+
+.section-title h2 {
+    font-size: 35px;
+    color: #5d4037;
+    margin: 5px 0;
+}
+
+.section-title p {
+    color: #8d6e63;
+}
+
+
+/* ================= FORM ================= */
+
+.order-form {
+    max-width: 650px;
+    margin: auto;
+    padding: 35px;
+    background: #faf6f1;
+    border-radius: 25px;
+    box-shadow: 0 10px 30px rgba(70, 45, 30, 0.08);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.form-group label span {
+    color: #9a887e;
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #ddcec0;
+    border-radius: 12px;
+    background: white;
+    color: #3e2723;
+    font-size: 15px;
+    outline: none;
+    transition: 0.3s;
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: #a66a3f;
+    box-shadow: 0 0 0 3px rgba(166, 106, 63, 0.1);
+}
+
+.add-button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 13px;
+    background: #6d4c41;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.add-button:hover {
+    background: #4b2e22;
+    transform: translateY(-2px);
+}
+
+
+/* ================= ORDERS ================= */
+
+.orders-section {
+    background: #f3e5d5;
+}
+
+.orders-container {
+    max-width: 950px;
+    margin: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.order-card {
+    background: white;
+    padding: 22px;
+    border-radius: 18px;
+    border-right: 5px solid #a66a3f;
+    box-shadow: 0 8px 22px rgba(70, 45, 30, 0.08);
+}
+
+.order-card h3 {
+    color: #5d4037;
+    margin-bottom: 8px;
+}
+
+.order-card p {
+    color: #795548;
+    font-size: 14px;
+    margin: 4px 0;
+}
+
+.empty-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 45px 20px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 20px;
+}
+
+.empty-message span {
+    font-size: 45px;
+}
+
+.empty-message h3 {
+    margin-top: 8px;
+    color: #5d4037;
+}
+
+.empty-message p {
+    color: #8d6e63;
+}
+
+
+/* ================= CLEAR BUTTON ================= */
+
+.clear-button {
+    display: block;
+    margin: 35px auto 0;
+    padding: 12px 25px;
+    border: 1px solid #9b6b52;
+    border-radius: 12px;
+    background: transparent;
+    color: #6d4c41;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.clear-button:hover {
+    background: #6d4c41;
+    color: white;
+}
+
+
+/* ================= CONTACT ================= */
+
+.contact-section {
+    background: #fff;
+    text-align: center;
+}
+
+.social-links {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.social-link {
+    text-decoration: none;
+    color: #4b2e22;
+    background: #f3e5d5;
+    padding: 13px 22px;
+    border-radius: 30px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.social-link:hover {
+    background: #6d4c41;
+    color: white;
+    transform: translateY(-3px);
+}
+
+
+/* ================= FOOTER ================= */
+
+footer {
+    background: #4b2e22;
+    color: white;
+    text-align: center;
+    padding: 25px 15px;
+}
+
+footer p {
+    margin: 4px 0;
+    font-size: 13px;
+}
+
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 700px) {
+
+    .header {
+        flex-direction: column;
+        gap: 14px;
+        padding: 16px;
+    }
+
+    nav {
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    nav a {
+        font-size: 13px;
+    }
+
+    .hero {
+        min-height: 45vh;
+        padding: 50px 20px;
+    }
+
+    .hero h1 {
+        font-size: 55px;
+    }
+
+    .hero p {
+        font-size: 19px;
+    }
+
+    .order-section,
+    .orders-section,
+    .contact-section {
+        padding: 55px 18px;
+    }
+
+    .section-title h2 {
+        font-size: 29px;
+    }
+
+    .order-form {
+        padding: 22px;
+    }
+
+    .orders-container {
+        grid-template-columns: 1fr;
+    }
+}
