@@ -3,10 +3,29 @@ const session = require("express-session");
 const bcrypt = require("bcryptjs");
 const Database = require("better-sqlite3");
 const path = require("path");
+const cors = require("cors");
+const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const db = new Database("ghawati.db");
+
+const dataDir = process.env.RENDER_DISK_PATH || path.join(__dirname, "data");
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+const dbPath = path.join(dataDir, "ghawati.db");
+const db = new Database(dbPath);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || origin.endsWith('.github.io') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -14,8 +33,18 @@ app.use(session({
   secret: process.env.SESSION_SECRET || "change-this-secret-in-production",
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, sameSite: "lax", secure: false, maxAge: 1000 * 60 * 60 * 8 }
+  cookie: { 
+    httpOnly: true, 
+    sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax", 
+    secure: process.env.NODE_ENV === 'production', 
+    maxAge: 1000 * 60 * 60 * 8 
+  }
 }));
+
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 app.use(express.static(path.join(__dirname, "public")));
 
 db.exec(`
@@ -45,13 +74,15 @@ if (!count) {
   db.prepare("INSERT INTO users (username,password_hash,name,role) VALUES (?,?,?,?)")
     .run("admin", hash, "مدير النظام", "admin");
   const users = [
-    ["khalid", "خالد", "employee"],
+    ["khalid", "خالد", "runner"],
     ["sara", "سارة", "employee"],
-    ["ahmed", "أحمد", "runner"]
+    ["ahmed", "أحمد", "employee"]
   ];
   const stmt = db.prepare("INSERT INTO users (username,password_hash,name,role) VALUES (?,?,?,?)");
   const temp = bcrypt.hashSync("123456", 10);
   users.forEach(u => stmt.run(u[0], temp, u[1], u[2]));
+} else {
+  db.prepare("UPDATE users SET role = 'runner' WHERE username = 'khalid'").run();
 }
 
 function auth(req, res, next) {
@@ -65,6 +96,10 @@ function role(...roles) {
     next();
   };
 }
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
 app.post("/api/login", (req,res) => {
   const { username, password } = req.body;
